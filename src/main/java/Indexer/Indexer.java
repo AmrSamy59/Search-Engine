@@ -5,6 +5,8 @@ import Utils.StopWords;
 import opennlp.tools.stemmer.PorterStemmer;
 import opennlp.tools.tokenize.TokenizerME;
 import org.jsoup.Jsoup;
+import org.jsoup.nodes.Element;
+import org.jsoup.select.Elements;
 
 import java.io.InputStream;
 import java.util.*;
@@ -31,8 +33,8 @@ public class Indexer {
 
     public static void indexDocument(Document document, TokenizerME tokenizer) {
         indexedDocuments.put(document.getId(), document);
-
-        String[] tokens = tokenizer.tokenize(document.content);
+        String soup = Jsoup.parse(document.content).text().replaceAll("\\s+", " ").trim();
+        String[] tokens = tokenizer.tokenize(soup);
 
         Map<String, Integer> termFreq = new HashMap<>();
 
@@ -75,6 +77,8 @@ public class Indexer {
             }
         }
     }
+
+
 
     public void runIndexer() throws Exception {
         executor = Executors.newFixedThreadPool(numThreads);
