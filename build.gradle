@@ -17,6 +17,8 @@ dependencies {
     implementation 'org.slf4j:slf4j-simple:2.0.16'
     implementation 'org.deeplearning4j:deeplearning4j-core:1.0.0-M2.1' // for image searching
     implementation 'org.nd4j:nd4j-native-platform:1.0.0-M2.1' // for image searching
+    implementation 'io.github.cdimascio:dotenv-java:2.3.0'
+    implementation 'org.mongodb:mongodb-driver-sync:4.11.0'
 }
 
 test {
