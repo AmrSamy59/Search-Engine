@@ -1,12 +1,13 @@
 package ImageSearching;
 
+import com.mongodb.client.AggregateIterable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.index.Index;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
-
+import org.bson.Document;
 import javax.annotation.PostConstruct;
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
@@ -16,8 +17,12 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 @Service
 public class ImageSearchService {
@@ -97,31 +102,55 @@ public class ImageSearchService {
         try {
             // Extract features of the input image
             float[] queryFeatures = featureExtractor.extractFeatures(file.getBytes());
+            List<Double> vectorList = IntStream.range(0, queryFeatures.length)
+                    .mapToObj(i -> (double) queryFeatures[i])
+                    .toList();
 
-            // Simple search: Fetch all images and compute Euclidean distance
-            List<Image> allImages = mongoTemplate.findAll(Image.class, "images");
-            allImages.sort((a, b) -> {
-                float distA = calculateEuclideanDistance(queryFeatures, a.getFeatures());
-                float distB = calculateEuclideanDistance(queryFeatures, b.getFeatures());
-                return Float.compare(distA, distB);
-            });
+            List<Document> pipeline = List.of(
+                    new Document("$search", new Document()
+                            .append("index", "features_idx")  // Or your index name
+                            .append("knnBeta", new Document()
+                                    .append("vector", vectorList)
+                                    .append("path", "features")
+                                    .append("k", 10)  // Top 10 results
+                            )
+                    )
+            );
 
+            AggregateIterable<Document> result = mongoTemplate.getCollection("images").aggregate(pipeline);
+            List<Image> resultList = new ArrayList<>();
+            for (Document doc : result) {
+                Image image = new Image();
+                image.setId(doc.getString("_id"));
+                image.setUrl(doc.getString("url"));
+
+                List<Double> featuresList = (List<Double>) doc.get("features");
+                float[] features = new float[featuresList.size()];
+                for (int i = 0; i < featuresList.size(); i++) {
+                    features[i] = featuresList.get(i).floatValue();
+                }
+
+                // 🔥 Calculate similarity score (confidence)
+                float similarity = calculateCosineSimilarity(queryFeatures, features);
+                System.out.println("Similarity for image " + image.getUrl() + ": " + similarity);
+
+                resultList.add(image);
+            }
             // Return top 10 similar images
-            return allImages.subList(0, Math.min(10, allImages.size()));
+            return resultList;
         } catch (IOException e) {
             throw new RuntimeException("Failed to search images", e);
         }
     }
 
-    private float calculateEuclideanDistance(float[] v1, float[] v2) {
-        if (v1.length != v2.length) {
-            throw new IllegalArgumentException("Vectors must have the same length");
-        }
-        float sum = 0;
+    float calculateCosineSimilarity(float[] v1, float[] v2) {
+        float dot = 0, norm1 = 0, norm2 = 0;
         for (int i = 0; i < v1.length; i++) {
-            float diff = v1[i] - v2[i];
-            sum += diff * diff;
+            dot += v1[i] * v2[i];
+            norm1 += v1[i] * v1[i];
+            norm2 += v2[i] * v2[i];
         }
-        return (float) Math.sqrt(sum);
+        return dot / ((float)Math.sqrt(norm1) * (float)Math.sqrt(norm2));
     }
+
 }

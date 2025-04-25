@@ -27,7 +27,7 @@ public class ImageFeatureExtractor {
     private static final int HEIGHT = 224;
     private static final int WIDTH = 224;
     private static final int CHANNELS = 3;
-    private static final String FEATURE_LAYER = "flatten_1";  // ResNet50's feature extraction layer
+    private static final String FEATURE_LAYER = "avg_pool";  // prev: flatten_1
 
     @PostConstruct
     public void init() throws IOException {
@@ -59,8 +59,24 @@ public class ImageFeatureExtractor {
         // Extract features
         INDArray featuresArray = model.feedForward(imageArray, false).get(FEATURE_LAYER);
 
-        // Convert to float array
-        return featuresArray.data().asFloat();
+//        System.out.println(model.summary());
+        float[] rawFeatures = featuresArray.data().asFloat();
+        return normalizeVector(rawFeatures);
+    }
+
+    private float[] normalizeVector(float[] vector) {
+        float norm = 0f;
+        for (float v : vector) {
+            norm += v * v;
+        }
+        norm = (float) Math.sqrt(norm);
+        if (norm == 0f) return vector;
+
+        float[] normalized = new float[vector.length];
+        for (int i = 0; i < vector.length; i++) {
+            normalized[i] = vector[i] / norm;
+        }
+        return normalized;
     }
 
     private INDArray preprocessImage(BufferedImage image) {
