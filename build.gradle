@@ -44,6 +44,7 @@ dependencies {
     implementation('org.deeplearning4j:deeplearning4j-modelimport:1.0.0-M2.1') {
         exclude group: 'org.slf4j', module: 'slf4j-simple'
     }
+    implementation 'com.microsoft.onnxruntime:onnxruntime:1.16.3'
     // Springboot
     implementation 'org.springframework.boot:spring-boot-starter'
     implementation 'org.springframework.boot:spring-boot-starter-web'

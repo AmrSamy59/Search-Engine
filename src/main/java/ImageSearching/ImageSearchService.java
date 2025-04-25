@@ -1,5 +1,6 @@
 package ImageSearching;
 
+import ai.onnxruntime.OrtException;
 import com.mongodb.client.AggregateIterable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Sort;
@@ -44,14 +45,14 @@ public class ImageSearchService {
         );
     }
 
-    public void saveImage(MultipartFile file) throws IOException {
+    public void saveImage(MultipartFile file) throws Exception {
         float[] features = featureExtractor.extractFeatures(file.getInputStream().readAllBytes());
         Image image = new Image();
         image.setFeatures(features);
         imageRepository.save(image);
     }
 
-    public void processImageFromUrl(String url) throws IOException, InterruptedException {
+    public void processImageFromUrl(String url) throws Exception {
         System.out.println("Processing image from " + url);
 
         // Validate URL
@@ -90,7 +91,7 @@ public class ImageSearchService {
         System.out.println("Saved image with ID: " + image.getId() + " and url: " + url);
     }
 
-    public float[] extractFeatures(MultipartFile file) {
+    public float[] extractFeatures(MultipartFile file) throws Exception {
         try {
             return featureExtractor.extractFeatures(file.getBytes());
         } catch (IOException e) {
@@ -98,7 +99,7 @@ public class ImageSearchService {
         }
     }
 
-    public List<Image> searchSimilarImages(MultipartFile file) {
+    public List<Image> searchSimilarImages(MultipartFile file) throws Exception {
         try {
             // Extract features of the input image
             float[] queryFeatures = featureExtractor.extractFeatures(file.getBytes());
@@ -133,8 +134,9 @@ public class ImageSearchService {
                 // 🔥 Calculate similarity score (confidence)
                 float similarity = calculateCosineSimilarity(queryFeatures, features);
                 System.out.println("Similarity for image " + image.getUrl() + ": " + similarity);
-
-                resultList.add(image);
+                if(similarity > 0.7) {
+                    resultList.add(image);
+                }
             }
             // Return top 10 similar images
             return resultList;

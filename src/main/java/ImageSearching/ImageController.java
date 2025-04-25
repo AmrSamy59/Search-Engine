@@ -1,10 +1,7 @@
 package ImageSearching;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -17,23 +14,27 @@ public class ImageController {
     @Autowired
     private ImageSearchService imageSearchService;
 
+    @CrossOrigin(origins = "*")
     @PostMapping("/extract-features")
-    public float[] extractFeatures(@RequestParam("file") MultipartFile file) throws IOException {
+    public float[] extractFeatures(@RequestParam("file") MultipartFile file) throws Exception {
         return imageSearchService.extractFeatures(file);
     }
 
+    @CrossOrigin(origins = "*")
     @PostMapping("/upload")
-    public void uploadImage(@RequestParam("file") MultipartFile file) throws IOException {
+    public void uploadImage(@RequestParam("file") MultipartFile file) throws Exception {
         imageSearchService.saveImage(file);
     }
 
+    @CrossOrigin(origins = "*")
     @PostMapping("/upload-from-url")
-    public void uploadImageFromUrl(@RequestParam("url") String url) throws IOException, InterruptedException {
+    public void uploadImageFromUrl(@RequestParam("url") String url) throws Exception {
         imageSearchService.processImageFromUrl(url);
     }
 
+    @CrossOrigin(origins = "*")
     @PostMapping("/search")
-    public List<Image> searchSimilarImages(@RequestParam("file") MultipartFile file) {
+    public List<Image> searchSimilarImages(@RequestParam("file") MultipartFile file) throws Exception {
         return imageSearchService.searchSimilarImages(file);
     }
 }
