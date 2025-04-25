@@ -17,7 +17,7 @@
   <button onclick="uploadAndSearch()">Search Similar Images</button>
 
   <h2>Results:</h2>
-  <div id="results"></div>
+  <div id="results" style="display: flex; flex-direction: column;"></div>
 
   <script>
     async function uploadAndSearch() {
@@ -48,6 +48,7 @@
             link.target = '_blank';
             link.innerHTML = `${img.url}`;
           resultsDiv.appendChild(link);
+          resultsDiv.appendChild(document.createElement('br'));
         });
 
       } catch (error) {

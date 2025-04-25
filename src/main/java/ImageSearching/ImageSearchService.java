@@ -134,7 +134,7 @@ public class ImageSearchService {
                 // 🔥 Calculate similarity score (confidence)
                 float similarity = calculateCosineSimilarity(queryFeatures, features);
                 System.out.println("Similarity for image " + image.getUrl() + ": " + similarity);
-                if(similarity > 0.7) {
+                if(similarity > 0.3) {
                     resultList.add(image);
                 }
             }
