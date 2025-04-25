@@ -43,11 +43,15 @@
         resultsDiv.innerHTML = '';
 
         images.forEach(img => {
-          const link = document.createElement('a');
-            link.href = img.url;
-            link.target = '_blank';
-            link.innerHTML = `${img.url}`;
-          resultsDiv.appendChild(link);
+            const imgElement = document.createElement('img');
+            imgElement.src = img.url;
+            imgElement.alt = 'Similar Image';
+            imgElement.style.width = '200px';
+            imgElement.style.height = 'auto';
+            imgElement.style.margin = '10px';
+            imgElement.attributes['referrerpolicy'] = 'no-referrer';
+          
+          resultsDiv.appendChild(imgElement);
           resultsDiv.appendChild(document.createElement('br'));
         });
 
