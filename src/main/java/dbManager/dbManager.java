@@ -1,5 +1,6 @@
 package dbManager;
 
+import ImageSearching.Image;
 import Utils.Posting;
 import Utils.WebDocument;
 import com.mongodb.client.*;
@@ -24,12 +25,16 @@ public class dbManager {
     private final MongoCollection<Document> tokensCollection;  // Renamed for proper casing
     private MongoDatabase database;
     private final MongoCollection<Document> collection;
+    private final MongoCollection<Document> imageCollection;
+
 
     public dbManager() {
         mongoClient = MongoClients.create(CONNECTION_STRING);
         database = mongoClient.getDatabase(DB_NAME);
         collection = database.getCollection(COLLECTION_NAME);
         tokensCollection = database.getCollection("tokens");  // Renamed for proper casing
+        imageCollection = database.getCollection("images");
+
         System.out.println("Connected to MongoDB Atlas.");
     }
 
@@ -336,6 +341,45 @@ public class dbManager {
 
         return docs;
     }
+
+    public void saveImages(List<Image> images) {
+        // Get existing URLs to avoid re-inserting
+        List<String> urls = images.stream().map(Image::getUrl).collect(Collectors.toList());
+
+        // Find which already exist
+        Set<String> existingUrls = new HashSet<>();
+        imageCollection.find(Filters.in("url", urls)).forEach(doc -> {
+            existingUrls.add(doc.getString("url"));
+        });
+
+        List<Document> toInsert = new ArrayList<>();
+        for (Image img : images) {
+            if (existingUrls.contains(img.getUrl())) {
+                System.out.println("⚠️ Skipped duplicate: " + img.getUrl());
+                continue;
+            }
+
+            List<Double> featureList = new ArrayList<>(img.getFeatures().length);
+            for (float f : img.getFeatures()) {
+                featureList.add((double) f);
+            }
+
+            Document imageDoc = new Document("url", img.getUrl())
+                    .append("_id", img.getUrl())
+                    .append("features", featureList)
+                    .append("_class", img.getClass().getPackageName()+"."+img.getClass().getName());
+
+            toInsert.add(imageDoc);
+        }
+
+        if (!toInsert.isEmpty()) {
+            imageCollection.insertMany(toInsert);
+            System.out.println("✅ Inserted " + toInsert.size() + " new images.");
+        } else {
+            System.out.println("⚠️ No new images to insert.");
+        }
+    }
+
 
     // Close the database connection
     public void close() {

@@ -30,6 +30,10 @@ public class WebDocument {
         return docId;
     }
 
+    public String getUrl() {
+        return url;
+    }
+
     public String getSoupedContent() {
         return Jsoup.parse(html).text().replaceAll("\\s+", " ").trim();
     }

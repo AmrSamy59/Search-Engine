@@ -1,5 +1,7 @@
 package Indexer;
 
+import ImageSearching.Image;
+import ImageSearching.ImageFeatureExtractor;
 import Utils.Utils;
 import Utils.Tokenizer;
 import Utils.WebDocument;
@@ -18,9 +20,11 @@ public class Indexer {
     private static ConcurrentHashMap<String, List<Posting>> invertedIndex;
     private static ConcurrentHashMap<String, WebDocument> indexedDocuments;
     private static ConcurrentHashMap<String, WebDocument> unindexedDocs;
+    private static ConcurrentLinkedQueue<Image> imageQueue;
     private static Tokenizer tokenizer;
     private ExecutorService executor;
     private dbManager dbManager;
+    private ImageFeatureExtractor imageFeatureExtractor;
     private final int numThreads = 10;
 
     public Indexer() throws Exception {
@@ -29,6 +33,10 @@ public class Indexer {
         tokenizer = new Tokenizer();
         dbManager = new dbManager();
         unindexedDocs = dbManager.getNonIndexedDocuments();
+        imageFeatureExtractor = new ImageFeatureExtractor();
+        imageFeatureExtractor.init();
+
+        imageQueue = new ConcurrentLinkedQueue<>();
     }
 
     public static void indexDocument(WebDocument document, TokenizerME tokenizer) {
@@ -79,7 +87,28 @@ public class Indexer {
         }
     }
 
+    public static void processImagesInDocument(WebDocument document, ImageFeatureExtractor imageFeatureExtractor) {
+        Elements images = Jsoup.parse(document.getSoupedContent()).select("img[src]");
+        for (Element img : images) {
+            String imageUrl = img.absUrl("src");
+            if (imageUrl.isEmpty()) continue;
 
+            try {
+                byte[] imageBytes = Utils.downloadImage(imageUrl); // implement this
+                float[] features = imageFeatureExtractor.extractFeatures(imageBytes);
+                Image image = new Image();
+                image.setFeatures(features);
+                image.setUrl(imageUrl);
+                image.setDocUrl(document.getUrl());
+                image.setId(UUID.randomUUID().toString());
+                imageQueue.add(image);
+                System.out.println("✅ Image saved: " + imageUrl);
+            } catch (Exception e) {
+                System.err.println("❌ Error indexing image: " + imageUrl + " | " + e.getMessage());
+            }
+        }
+
+    }
 
     public void runIndexer() throws Exception {
         System.out.println("Starting indexer...");
@@ -88,6 +117,7 @@ public class Indexer {
             while (!unindexedDocs.isEmpty()) {
                 for (WebDocument doc : unindexedDocs.values()) {
                     executor.submit(new IndexerWorker(doc, tokenizer));
+                    executor.submit(new ImageIndexerWorker(doc, imageFeatureExtractor));
                 }
                 unindexedDocs.clear();
             }
@@ -109,6 +139,20 @@ public class Indexer {
                 System.out.println("Tokens indexed.");
 
                 invertedIndex.clear();
+
+                try {
+                    List<Image> imgsList = new ArrayList<>();
+                    while (!imageQueue.isEmpty()) {
+                        imgsList.add(imageQueue.poll());
+                    }
+
+                    dbManager.saveImages(imgsList);
+
+                    imageQueue.clear();
+                }
+                catch (Exception e) {
+                    e.printStackTrace();
+                }
 
                 if (!unindexedDocs.isEmpty()) {
                     System.out.println("Running another indexing batch.");
