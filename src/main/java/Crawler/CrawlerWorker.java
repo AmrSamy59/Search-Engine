@@ -56,39 +56,16 @@ public class CrawlerWorker implements Runnable {
       }
 
       try {
-        Document doc = Jsoup.connect(url)
-                .timeout(5000)
-                .ignoreContentType(true)
-                .get();
+        Document doc = Jsoup.connect(url).timeout(5000).get();
 
         System.out.println("Crawling: " + url);
 
         // Extract title and content
-        String title = doc.title() != null && !doc.title().isEmpty() ? doc.title() : "Untitled";
-        String content = doc.body() != null ? doc.body().html() : ""; // TODO TEST
+        String title = !doc.title().isEmpty() ? doc.title() : "Untitled";
+        String content = doc.body().html();
 
-        // Add to batch for MongoDB
-        org.bson.Document bsonDoc = new org.bson.Document("url", url)
-                .append("title", title)
-                .append("content", content)
-                .append("timestamp", System.currentTimeMillis())
-                .append("indexed", false);
-        batch.add(bsonDoc);
 
-        // Insert batch if large enough
-
-        if (batch.size() >= 100) {
-
-          dbManager.insertDocuments(batch);
-          batch.clear();
-        }
-
-        if (pageCount.incrementAndGet() >= maxPages) {
-          urlsToCrawl.clear();
-          break;
-        }
-
-        // Process links in parallel
+        // Extract links
         Elements links = doc.select("a[href]");
         System.out.println("links sized " + links.size());
 
@@ -97,9 +74,43 @@ public class CrawlerWorker implements Runnable {
 
         // Submit link processing tasks
         List<Runnable> linkTasks = new ArrayList<>();
+        Set<String> linksText = ConcurrentHashMap.newKeySet();
+
         for (Element link : links) {
           String newUrl = link.absUrl("href");
-          linkTasks.add(() -> processLink(newUrl, url));
+          try {
+            // Normalize with correct baseUrl
+            String normalizedUrl = Crawler.normalizeUrl(newUrl, url);
+            if (normalizedUrl != null && !normalizedUrl.isEmpty()) {
+              linksText.add(normalizedUrl);
+              // Pass normalized URL to processLink
+              String finalNormalizedUrl = normalizedUrl;
+              linkTasks.add(() -> processLink(finalNormalizedUrl, url));
+            }
+          } catch (Exception e) {
+            System.err.println("Failed to normalize URL: " + newUrl + " - " + e.getMessage());
+          }
+        }
+
+        // Add to batch for MongoDB
+        org.bson.Document bsonDoc = new org.bson.Document("url", url)
+                .append("title", title)
+                .append("content", content)
+                .append("timestamp", System.currentTimeMillis())
+                .append("indexed", false)
+                .append("links", linksText);
+        batch.add(bsonDoc);
+
+        // Insert batch if large enough
+        if (batch.size() >= 25) {
+          dbManager.insertDocuments(batch);
+          System.out.println("database insert batch with size " + batch.size());
+          batch.clear();
+        }
+
+        if (pageCount.incrementAndGet() >= maxPages) {
+          urlsToCrawl.clear();
+          break;
         }
 
         // Execute tasks in parallel
@@ -129,6 +140,8 @@ public class CrawlerWorker implements Runnable {
 
       } catch (IOException e) {
         System.err.println("Failed to fetch: " + url + " - " + e.getMessage());
+      } catch (Exception e) {
+        throw new RuntimeException(e);
       }
     }
 
@@ -141,19 +154,15 @@ public class CrawlerWorker implements Runnable {
     linkProcessor.shutdownNow();
   }
 
-  private void processLink(String newUrl, String baseUrl) {
+  private void processLink(String normalizedUrl, String baseUrl) {
     try {
-      String normalized = Crawler.normalizeUrl(newUrl, baseUrl);
-      if (normalized != null &&
-              !normalized.isEmpty() &&
-              !visited.contains(normalized) &&
-              robotsM.canCrawl(normalized)) {
-        System.out.println("Found: " + normalized);
-        urlsToCrawl.add(normalized);
-        System.out.println("the queue size is: " + urlsToCrawl.size());
+      if (normalizedUrl != null && !normalizedUrl.isEmpty() &&
+              !visited.contains(normalizedUrl) && robotsM.canCrawl(normalizedUrl)) {
+        urlsToCrawl.add(normalizedUrl);
+        System.out.println("Added to queue: " + normalizedUrl + ", queue size: " + urlsToCrawl.size());
       }
     } catch (Exception e) {
-      System.err.println("Failed to normalize URL: " + newUrl + " - " + e.getMessage());
+      System.err.println("Failed to process URL: " + normalizedUrl + " - " + e.getMessage());
     }
   }
 }
