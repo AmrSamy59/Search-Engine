@@ -2,7 +2,6 @@ package Pagerank;
 
 import com.mongodb.client.*;
 import org.bson.Document;
-import org.bson.types.ObjectId;
 import io.github.cdimascio.dotenv.Dotenv;
 
 import java.util.*;
@@ -10,13 +9,14 @@ import java.util.concurrent.*;
 
 public class LinkGraphBuilder {
     // Using Concurrent HashMap to ensure thread-safety
-    Map<String, String> urlToId = new ConcurrentHashMap<>();
-    Map<String, String> idToUrl = new ConcurrentHashMap<>();
+    private final Map<String, String> urlToId = new ConcurrentHashMap<>();
+    private final Map<String, String> idToUrl = new ConcurrentHashMap<>();
 
     private MongoDatabase database;
     private MongoCollection<Document> docsCollection;
-    private MongoCollection<Document> linksCollection;
 
+    private final Map<String, List<String>> incomingLinks = new ConcurrentHashMap<>();
+    private final Map<String, Integer> outDegreeCache = new ConcurrentHashMap<>();
 
     private ExecutorService executor;
 
@@ -29,8 +29,6 @@ public class LinkGraphBuilder {
             MongoClient client = MongoClients.create(connectionString);
             database = client.getDatabase(dbName);
             docsCollection = database.getCollection("documents");
-            linksCollection = database.getCollection("links");
-
 
             executor = Executors.newFixedThreadPool(8);
 
@@ -43,11 +41,10 @@ public class LinkGraphBuilder {
 
 
     public void buildUrlIdMaps() {
-        System.out.println("[LinkGraphBuilder] Building URL to ID maps in parallel...");
+        System.out.println("[LinkGraphBuilder] Building URL to ID maps...");
 
         List<Future<?>> futures = new ArrayList<>();
         MongoCursor<Document> cursor = docsCollection.find().batchSize(500).iterator();
-
         while (cursor.hasNext()) {
             Document doc = cursor.next();
             futures.add(executor.submit(() -> {
@@ -61,75 +58,47 @@ public class LinkGraphBuilder {
             }));
         }
 
-        // Wait for all tasks to finish
-        try {
-            for (Future<?> future : futures) {
-                future.get(); // Block until all tasks complete
-            }
-        } catch (InterruptedException | ExecutionException e) {
-            e.printStackTrace();
-        }
-
-        System.out.println("[LinkGraphBuilder] URL to ID maps built. Total entries: " + urlToId.size());
+        waitForFutures(futures);
+        System.out.println("[LinkGraphBuilder] URL to ID maps built. Total: " + urlToId.size());
     }
 
-    // Build the links collection concurrently
-    public void buildLinksCollection() {
-        System.out.println("[LinkGraphBuilder] Building links collection in parallel...");
-
-        linksCollection.drop();
-
+    public void buildLinkGraphInMemory() {
+        System.out.println("[LinkGraphBuilder] Building in-memory link graph...");
         List<Future<?>> futures = new ArrayList<>();
 
         MongoCursor<Document> cursor = docsCollection.find().batchSize(500).iterator();
-
         while (cursor.hasNext()) {
             Document doc = cursor.next();
-
             futures.add(executor.submit(() -> {
-                String ParentURL = doc.getString("url");
-                String ParentID = urlToId.get(ParentURL);
+                String parentURL = doc.getString("url");
+                String parentID = urlToId.get(parentURL);
 
-                // Log the parent URL processed
-                System.out.println("Processing Parent URL: " + ParentURL);
-
-                List<String> ChildLinks = doc.getList("links", String.class);
-                if (ParentID != null && ChildLinks != null) {
-                    List<Document> linksDocs = new ArrayList<>();
-                    for (String childLink : ChildLinks) {
-                        if (childLink != null) {
-                            String ChildID = urlToId.get(childLink);
-                            if (ChildID == null) continue; // Ignore links we didn't crawl
-
-                            Document newDoc = new Document();
-                            newDoc.put("from_id", ParentID);
-                            newDoc.put("to_id", ChildID);
-                            linksDocs.add(newDoc);
-                        }
-                    }
-
-                    if (!linksDocs.isEmpty()) {
-                        synchronized (linksCollection) {
-                            linksCollection.insertMany(linksDocs);
-                        }
+                List<String> childLinks = doc.getList("links", String.class);
+                if (parentID != null && childLinks != null) {
+                    outDegreeCache.put(parentID, childLinks.size());
+                    for (String childURL : childLinks) {
+                        String childID = urlToId.get(childURL);
+                        if (childID == null) continue; // Skip missing pages
+                        incomingLinks.computeIfAbsent(childID, k -> new ArrayList<>()).add(parentID);
                     }
                 }
             }));
         }
 
-        // Wait for all tasks to finish
-        try {
-            for (Future<?> future : futures) {
-                future.get(); // Block until all tasks complete
-            }
-        } catch (InterruptedException | ExecutionException e) {
-            e.printStackTrace();
-        }
-
-        System.out.println("[LinkGraphBuilder] Link collection built successfully.");
+        waitForFutures(futures);
+        System.out.println("[LinkGraphBuilder] In-memory link graph built. Total links: " + incomingLinks.size());
     }
 
-    // Shutdown executor after all work is done
+    private void waitForFutures(List<Future<?>> futures) {
+        try {
+            for (Future<?> future : futures) {
+                future.get();
+            }
+        } catch (InterruptedException | ExecutionException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     public void shutdownExecutor() {
         executor.shutdown();
         try {
@@ -141,11 +110,11 @@ public class LinkGraphBuilder {
         }
     }
 
-    // Main method to start the process
-    public static void main(String[] args) {
-        LinkGraphBuilder builder = new LinkGraphBuilder();
-        builder.buildUrlIdMaps();
-        builder.buildLinksCollection();
-        builder.shutdownExecutor();
+    public Map<String, List<String>> getIncomingLinks() {
+        return incomingLinks;
+    }
+
+    public Map<String, Integer> getOutDegreeCache() {
+        return outDegreeCache;
     }
 }
