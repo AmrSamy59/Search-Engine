@@ -82,21 +82,22 @@ public class dbManager {
     }
 
     // Get documents with 'indexed' == false
-    public ConcurrentHashMap<String, WebDocument> getNonIndexedDocuments() {
+    public ConcurrentHashMap<String, WebDocument> getNonIndexedDocuments(int limit) {
         ConcurrentHashMap<String, WebDocument> docs = new ConcurrentHashMap<>();
 
         FindIterable<Document> results = collection.find(
                 Filters.eq("indexed", false)
-        );
+        ).limit(limit);
 
         for (Document doc : results) {
             String url = doc.getString("url");
             String title = doc.getString("title");
             String content = doc.getString("content");
-            String id = doc.getObjectId("_id").toString();  // Use ObjectId if _id is the default MongoDB ID field
+            String id = doc.getObjectId("_id").toString();
             boolean indexed = doc.getBoolean("indexed", false);
+            List<String> images = doc.getList("images", String.class);
 
-            WebDocument webDoc = new WebDocument(id, url, title, content);  // Convert ObjectId to String
+            WebDocument webDoc = new WebDocument(id, url, title, content, images);
             docs.put(id, webDoc);
         }
 

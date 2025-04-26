@@ -27,6 +27,10 @@ dependencies {
 
     // for image searching
     implementation 'com.microsoft.onnxruntime:onnxruntime:1.16.3'
+    implementation 'com.twelvemonkeys.imageio:imageio-webp:3.10.1'
+    implementation 'com.twelvemonkeys.imageio:imageio-core:3.10.1'
+    implementation 'com.twelvemonkeys.imageio:imageio-webp:3.10.1'
+    implementation 'com.twelvemonkeys.imageio:imageio-jpeg:3.10.1'
     // Springboot
     implementation 'org.springframework.boot:spring-boot-starter'
     implementation 'org.springframework.boot:spring-boot-starter-web'

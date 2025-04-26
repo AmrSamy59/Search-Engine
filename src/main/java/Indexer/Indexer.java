@@ -32,7 +32,7 @@ public class Indexer {
         indexedDocuments = new ConcurrentHashMap<>();
         tokenizer = new Tokenizer();
         dbManager = new dbManager();
-        unindexedDocs = dbManager.getNonIndexedDocuments();
+        unindexedDocs = dbManager.getNonIndexedDocuments(100);
         imageFeatureExtractor = new ImageFeatureExtractor();
         imageFeatureExtractor.init();
 
@@ -88,12 +88,12 @@ public class Indexer {
     }
 
     public static void processImagesInDocument(WebDocument document, ImageFeatureExtractor imageFeatureExtractor) {
-        Elements images = Jsoup.parse(document.getSoupedContent()).select("img[src]");
-        for (Element img : images) {
-            String imageUrl = img.absUrl("src");
+        List<String> images = document.getImages();
+        for (String imageUrl : images) {
             if (imageUrl.isEmpty()) continue;
 
             try {
+                System.out.println("Processing image: " + imageUrl);
                 byte[] imageBytes = Utils.downloadImage(imageUrl); // implement this
                 float[] features = imageFeatureExtractor.extractFeatures(imageBytes);
                 Image image = new Image();
@@ -132,7 +132,7 @@ public class Indexer {
                 dbManager.markAsIndexed(indexedIds);
                 indexedDocuments.clear();
 
-                unindexedDocs = dbManager.getNonIndexedDocuments();
+                unindexedDocs = dbManager.getNonIndexedDocuments(100);
 
                 System.out.println("Indexing batch completed, updating tokens.");
                 dbManager.insertTokens(invertedIndex);
