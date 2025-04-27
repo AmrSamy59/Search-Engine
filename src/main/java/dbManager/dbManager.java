@@ -3,6 +3,7 @@ package dbManager;
 import ImageSearching.Image;
 import Utils.Posting;
 import Utils.WebDocument;
+import com.mongodb.MongoBulkWriteException;
 import com.mongodb.client.*;
 import com.mongodb.client.model.*;
 import io.github.cdimascio.dotenv.Dotenv;
@@ -344,14 +345,11 @@ public class dbManager {
     }
 
     public void saveImages(List<Image> images) {
-        // Get existing URLs to avoid re-inserting
-        List<String> urls = images.stream().map(Image::getUrl).collect(Collectors.toList());
 
-        // Find which already exist
+        // Get existing URLs to avoid duplicates
+        List<String> urls = images.stream().map(Image::getUrl).collect(Collectors.toList());
         Set<String> existingUrls = new HashSet<>();
-        imageCollection.find(Filters.in("url", urls)).forEach(doc -> {
-            existingUrls.add(doc.getString("url"));
-        });
+        imageCollection.find(Filters.in("url", urls)).forEach(doc -> existingUrls.add(doc.getString("url")));
 
         List<Document> toInsert = new ArrayList<>();
         for (Image img : images) {
@@ -365,17 +363,27 @@ public class dbManager {
                 featureList.add((double) f);
             }
 
-            Document imageDoc = new Document("url", img.getUrl())
-                    .append("_id", img.getUrl())
+            Document imageDoc = new Document()
+                    .append("_id", img.getId()) // Use UUID from image.setId
+                    .append("url", img.getUrl())
+                    .append("docUrl", img.getDocUrl())
                     .append("features", featureList)
-                    .append("_class", img.getClass().getPackageName()+"."+img.getClass().getName());
+                    .append("_class", img.getClass().getName());
 
             toInsert.add(imageDoc);
         }
 
         if (!toInsert.isEmpty()) {
-            imageCollection.insertMany(toInsert);
-            System.out.println("✅ Inserted " + toInsert.size() + " new images.");
+            try {
+                imageCollection.insertMany(toInsert, new InsertManyOptions().ordered(false));
+                System.out.println("✅ Inserted " + toInsert.size() + " new images.");
+            } catch (MongoBulkWriteException e) {
+                System.err.println("Bulk write error: " + e.getMessage());
+                e.getWriteErrors().forEach(err ->
+                        System.err.println("Failed document at index " + err.getIndex() + ": " + err.getMessage()));
+            } catch (Exception e) {
+                System.err.println("Unexpected error: " + e.getMessage());
+            }
         } else {
             System.out.println("⚠️ No new images to insert.");
         }

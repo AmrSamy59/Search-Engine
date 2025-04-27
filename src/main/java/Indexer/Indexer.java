@@ -22,10 +22,10 @@ public class Indexer {
     private static ConcurrentHashMap<String, WebDocument> unindexedDocs;
     private static ConcurrentLinkedQueue<Image> imageQueue;
     private static Tokenizer tokenizer;
-    private ExecutorService executor;
+    private ExecutorService executor, imageExecutor;
     private dbManager dbManager;
     private ImageFeatureExtractor imageFeatureExtractor;
-    private final int numThreads = 10;
+    private final int numThreads = 8;
 
     public Indexer() throws Exception {
         invertedIndex = new ConcurrentHashMap<>();
@@ -113,20 +113,25 @@ public class Indexer {
     public void runIndexer() throws Exception {
         System.out.println("Starting indexer...");
         executor = Executors.newFixedThreadPool(numThreads);
+        imageExecutor = Executors.newFixedThreadPool(3);
         try {
             while (!unindexedDocs.isEmpty()) {
                 for (WebDocument doc : unindexedDocs.values()) {
                     executor.submit(new IndexerWorker(doc, tokenizer));
-                    executor.submit(new ImageIndexerWorker(doc, imageFeatureExtractor));
+                    imageExecutor.submit(new ImageIndexerWorker(doc, imageFeatureExtractor));
                 }
                 unindexedDocs.clear();
             }
         } finally {
             // Shutdown executor and wait for tasks to complete
             executor.shutdown();
+            imageExecutor.shutdown();
             try {
                 if (!executor.awaitTermination(10, TimeUnit.MINUTES)) {
                     executor.shutdownNow(); // Force shutdown if tasks don't finish
+                }
+                if(!imageExecutor.awaitTermination(10, TimeUnit.MINUTES)) {
+                    imageExecutor.shutdownNow();
                 }
                 ArrayList<String> indexedIds = new ArrayList<>(indexedDocuments.keySet());
                 dbManager.markAsIndexed(indexedIds);
@@ -160,6 +165,7 @@ public class Indexer {
                 }
             } catch (InterruptedException e) {
                 executor.shutdownNow();
+                imageExecutor.shutdownNow();
                 Thread.currentThread().interrupt();
             }
         }
