@@ -9,7 +9,8 @@ public class Main {
 
         PageRankCalculator calculator = new PageRankCalculator(
                 builder.getIncomingLinks(),
-                builder.getOutDegreeCache()
+                builder.getOutDegreeCache(),
+                builder.getDocuments()
         );
 
         calculator.initializePageRanks();

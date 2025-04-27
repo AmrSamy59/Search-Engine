@@ -10,13 +10,14 @@ import java.util.concurrent.*;
 public class LinkGraphBuilder {
     // Using Concurrent HashMap to ensure thread-safety
     private final Map<String, String> urlToId = new ConcurrentHashMap<>();
-    private final Map<String, String> idToUrl = new ConcurrentHashMap<>();
+//    private final Map<String, String> idToUrl = new ConcurrentHashMap<>();
 
     private MongoDatabase database;
     private MongoCollection<Document> docsCollection;
 
     private final Map<String, List<String>> incomingLinks = new ConcurrentHashMap<>();
     private final Map<String, Integer> outDegreeCache = new ConcurrentHashMap<>();
+    List<Document> documents;
 
     private ExecutorService executor;
 
@@ -31,6 +32,11 @@ public class LinkGraphBuilder {
             docsCollection = database.getCollection("documents");
 
             executor = Executors.newFixedThreadPool(8);
+            // Use projection to fetch only _id and url fields
+            Document projection = new Document("_id", 1).append("url", 1).append("links", 1);
+            // Fetch all documents at once into a List
+            documents = docsCollection.find().projection(projection).into(new ArrayList<>());
+
 
             System.out.println("[LinkGraphBuilder] Connected to MongoDB successfully.");
         } catch (Exception e) {
@@ -39,21 +45,23 @@ public class LinkGraphBuilder {
         }
     }
 
+    public List<Document> getDocuments() {
+        return documents;
+    }
+
 
     public void buildUrlIdMaps() {
         System.out.println("[LinkGraphBuilder] Building URL to ID maps...");
 
         List<Future<?>> futures = new ArrayList<>();
-        MongoCursor<Document> cursor = docsCollection.find().batchSize(500).iterator();
-        while (cursor.hasNext()) {
-            Document doc = cursor.next();
+        for (Document doc : documents) {
             futures.add(executor.submit(() -> {
                 String URL = doc.getString("url");
                 if (URL != null) {
                     String ID = doc.getObjectId("_id").toHexString();
                     urlToId.put(URL, ID);
-                    idToUrl.put(ID, URL);
-                    System.out.println("Processed URL: " + URL); // Log each URL processed using System.out
+                    //idToUrl.put(ID, URL);
+                    System.out.println("Processed URL: " + URL);
                 }
             }));
         }
@@ -66,20 +74,20 @@ public class LinkGraphBuilder {
         System.out.println("[LinkGraphBuilder] Building in-memory link graph...");
         List<Future<?>> futures = new ArrayList<>();
 
-        MongoCursor<Document> cursor = docsCollection.find().batchSize(500).iterator();
-        while (cursor.hasNext()) {
-            Document doc = cursor.next();
+        for (Document doc : documents) {
             futures.add(executor.submit(() -> {
                 String parentURL = doc.getString("url");
-                String parentID = urlToId.get(parentURL);
+                if (parentURL != null) {
+                    String parentID = urlToId.get(parentURL);
 
-                List<String> childLinks = doc.getList("links", String.class);
-                if (parentID != null && childLinks != null) {
-                    outDegreeCache.put(parentID, childLinks.size());
-                    for (String childURL : childLinks) {
-                        String childID = urlToId.get(childURL);
-                        if (childID == null) continue; // Skip missing pages
-                        incomingLinks.computeIfAbsent(childID, k -> new ArrayList<>()).add(parentID);
+                    List<String> childLinks = doc.getList("links", String.class);
+                    if (parentID != null && childLinks != null) {
+                        outDegreeCache.put(parentID, childLinks.size());
+                        for (String childURL : childLinks) {
+                            String childID = urlToId.get(childURL);
+                            if (childID == null) continue; // Skip missing pages
+                            incomingLinks.computeIfAbsent(childID, k -> new ArrayList<>()).add(parentID);
+                        }
                     }
                 }
             }));
