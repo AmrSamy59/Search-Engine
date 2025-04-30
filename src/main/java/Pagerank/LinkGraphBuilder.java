@@ -6,36 +6,26 @@ import io.github.cdimascio.dotenv.Dotenv;
 
 import java.util.*;
 import java.util.concurrent.*;
+import dbManager.dbManager;
 
 public class LinkGraphBuilder {
     // Using Concurrent HashMap to ensure thread-safety
     private final Map<String, String> urlToId = new ConcurrentHashMap<>();
-//    private final Map<String, String> idToUrl = new ConcurrentHashMap<>();
-
-    private MongoDatabase database;
-    private MongoCollection<Document> docsCollection;
+    private final dbManager db;
 
     private final Map<String, List<String>> incomingLinks = new ConcurrentHashMap<>();
     private final Map<String, Integer> outDegreeCache = new ConcurrentHashMap<>();
     List<Document> documents;
 
-    private ExecutorService executor;
+    private final ExecutorService executor;
 
     public LinkGraphBuilder() {
         try {
-            Dotenv dotenv = Dotenv.load();
-            String connectionString = dotenv.get("MONGO_URL");
-            String dbName = dotenv.get("MONGO_DB_NAME");
-
-            MongoClient client = MongoClients.create(connectionString);
-            database = client.getDatabase(dbName);
-            docsCollection = database.getCollection("documents");
+            db = new dbManager();
 
             executor = Executors.newFixedThreadPool(8);
-            // Use projection to fetch only _id and url fields
-            Document projection = new Document("_id", 1).append("url", 1).append("links", 1);
-            // Fetch all documents at once into a List
-            documents = docsCollection.find().projection(projection).into(new ArrayList<>());
+
+            documents = db.getDocumentsForGraphBuilder();
 
 
             System.out.println("[LinkGraphBuilder] Connected to MongoDB successfully.");
@@ -44,11 +34,6 @@ public class LinkGraphBuilder {
             throw new RuntimeException(e);
         }
     }
-
-    public List<Document> getDocuments() {
-        return documents;
-    }
-
 
     public void buildUrlIdMaps() {
         System.out.println("[LinkGraphBuilder] Building URL to ID maps...");
@@ -86,7 +71,7 @@ public class LinkGraphBuilder {
                         for (String childURL : childLinks) {
                             String childID = urlToId.get(childURL);
                             if (childID == null) continue; // Skip missing pages
-                            incomingLinks.computeIfAbsent(childID, k -> new ArrayList<>()).add(parentID);
+                            incomingLinks.computeIfAbsent(childID, k -> Collections.synchronizedList(new ArrayList<>())).add(parentID);
                         }
                     }
                 }

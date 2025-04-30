@@ -11,26 +11,36 @@ import io.github.cdimascio.dotenv.Dotenv;
 import java.util.*;
 import java.util.concurrent.*;
 
+import dbManager.*;
+
 public class PageRankCalculator {
-    private final MongoClient client;
-    private final MongoDatabase database;
-    private final MongoCollection<Document> docsCollection;
+//    private final MongoClient client;
+//    private final MongoDatabase database;
+//    private final MongoCollection<Document> docsCollection;
+//
+    private final dbManager db;
+
     private final Map<String, Double> pageRanks = new ConcurrentHashMap<>();
     private final Map<String, List<String>> incomingLinks;
     private final Map<String, Integer> outDegreeCache;
+
+    private Map<String, Double> domainRanks = new HashMap<>();
+    private Map<String, String> urlToDomain = new HashMap<>();
+
     private final List<Document> documents;
     private final double dampingFactor = 0.85;
     private final int iterations = 50;
 
     public PageRankCalculator(Map<String, List<String>> incomingLinks, Map<String, Integer> outDegreeCache, List<Document> documents) {
         try {
-            Dotenv dotenv = Dotenv.load();
-            String connectionString = dotenv.get("MONGO_URL");
-            String dbName = dotenv.get("MONGO_DB_NAME");
-
-            client = MongoClients.create(connectionString);
-            database = client.getDatabase(dbName);
-            docsCollection = database.getCollection("documents");
+//            Dotenv dotenv = Dotenv.load();
+//            String connectionString = dotenv.get("MONGO_URL");
+//            String dbName = dotenv.get("MONGO_DB_NAME");
+//
+//            client = MongoClients.create(connectionString);
+//            database = client.getDatabase(dbName);
+//            docsCollection = database.getCollection("documents");
+            this.db = new dbManager();
             this.documents = documents;
             this.incomingLinks = incomingLinks;
             this.outDegreeCache = outDegreeCache;
@@ -66,13 +76,28 @@ public class PageRankCalculator {
 
         for (int it = 0; it < iterations; it++) {
             Map<String, Double> newPageRanks = new ConcurrentHashMap<>();
+
+            double danglingSum = 0.0;
+
+            // Calculate contribution from dangling nodes (pages with no outgoing links)
+            for (String pageId : pageRanks.keySet()) {
+                if (outDegreeCache.getOrDefault(pageId, 0) == 0) {
+                    danglingSum += pageRanks.getOrDefault(pageId, 1.0);
+                }
+            }
+            danglingSum = (dampingFactor * danglingSum) / numPages;
+
+
             List<Callable<Void>> tasks = new ArrayList<>();
 
             for (String pageId : pageRanks.keySet()) {
+                double finalDanglingSum = danglingSum;
                 tasks.add(() -> {
-                    double newRank = (1.0 - dampingFactor) / numPages;
-                    List<String> parents = incomingLinks.getOrDefault(pageId, Collections.emptyList());
+                    // Base rank: (1 - d)/N + d * (sum of dangling contributions)
+                    double newRank = (1.0 - dampingFactor) / numPages + finalDanglingSum;
 
+                    // Add contributions from incoming links
+                    List<String> parents = incomingLinks.getOrDefault(pageId, Collections.emptyList());
                     for (String parentId : parents) {
                         double parentRank = pageRanks.getOrDefault(parentId, 1.0);
                         int outDegree = outDegreeCache.getOrDefault(parentId, 0);
@@ -116,34 +141,10 @@ public class PageRankCalculator {
 
     public void savePageRanks() {
         System.out.println("[PageRankCalculator] Saving PageRanks to database...");
-        double totalSum = pageRanks.values().stream().mapToDouble(Double::doubleValue).sum();
-        pageRanks.replaceAll((id, rank) -> rank / totalSum);
 
-        List<WriteModel<Document>> bulkUpdates = new ArrayList<>();
-
-        for (Map.Entry<String, Double> entry : pageRanks.entrySet()) {
-            String pageId = entry.getKey();
-            Double pageRank = entry.getValue();
-            bulkUpdates.add(new UpdateOneModel<>(
-                    new Document("_id", new ObjectId(pageId)),
-                    new Document("$set", new Document("pageRank", pageRank))
-            ));
-        }
-
-        if (!bulkUpdates.isEmpty()) {
-            try {
-                docsCollection.bulkWrite(bulkUpdates);
-            } catch (MongoBulkWriteException e) {
-                System.err.println("[PageRankCalculator] Error during bulk write: " + e.getMessage());
-            }
-        }
+        db.savePageRanks(pageRanks);
 
         System.out.println("[PageRankCalculator] PageRanks saved successfully.");
     }
-
-    public void close() {
-        if (client != null) {
-            client.close();
-        }
-    }
+    
 }
