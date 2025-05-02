@@ -44,6 +44,8 @@ public class dbManager {
         collection = database.getCollection(COLLECTION_NAME);
 
         tokensCollection = database.getCollection("tokens");  // Renamed for proper casing
+        imageCollection = database.getCollection("images");
+
 
         imagesDatabase = imagesMongoClient.getDatabase(DB_NAME);
         imageCollection = imagesDatabase.getCollection("images");
