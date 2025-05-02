@@ -41,3 +41,5 @@ bin/
 ### Mac OS ###
 .DS_Store
 .env
+/db
+/src/main/resources/models
