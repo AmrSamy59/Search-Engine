@@ -182,6 +182,8 @@ public class dbManager {
                 .collect(Collectors.toList());
 
         String flag_filter = isImages ? "images_indexed" : "indexed";
+        System.out.println("Marking indexed " + ids.size() + " documents as indexed");
+        System.out.println(ids);
 
         Document filter = new Document("_id", new Document("$in", objectIds));
         Document update = new Document("$set", new Document(flag_filter, true));
