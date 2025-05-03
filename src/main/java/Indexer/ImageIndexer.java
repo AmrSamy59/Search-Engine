@@ -37,6 +37,7 @@ public class ImageIndexer implements IndexerInterface {
 
         for (String imageUrl : images) {
             if (imageUrl.isEmpty()) continue;
+            if(imageUrl.endsWith(".gif") || imageUrl.endsWith(".svg") || imageUrl.endsWith(".webp")) continue;
             if(imageUrls.contains(imageUrl)) continue;
 
             // Limit to MAX_IMAGES_PER_DOC per document
