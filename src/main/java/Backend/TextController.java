@@ -24,6 +24,7 @@ public class TextController {
     @CrossOrigin(origins = "*")
     @GetMapping("/search")
     public List<WebDocument> handleQuery(@RequestParam(name = "query") String queryValue) throws Exception {
+        System.out.println(queryValue);
         return queryProcessor.process(queryValue);
     }
 }
