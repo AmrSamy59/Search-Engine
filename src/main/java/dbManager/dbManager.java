@@ -331,6 +331,30 @@ public class dbManager {
         }
     }
 
+    public int getTotalDocCount() {
+        long count = docsCollections.countDocuments();
+        return (int) count;
+    }
+
+    public Set<String> FilterDocsIdsByPhrase(Set<String> docIds , String phrase) {
+
+        Set<String> filteredDocIds = new HashSet<>();
+
+        List<ObjectId> objectIds = docIds.stream()
+                .map(ObjectId::new)
+                .collect(Collectors.toList());
+
+        for (Document doc : docsCollections.find(
+                Filters.and(Filters.in("_id", objectIds),
+                        Filters.regex("content", phrase, "i"))).projection(Projections.include("_id")))
+        {
+            String id = doc.getObjectId("_id").toString();
+            filteredDocIds.add(id);
+        }
+
+        return filteredDocIds;
+    }
+
 
     public Map<String , WebDocument> getDocumentsByIds(Set<String> docIds) {
         Map<String , WebDocument> docs = new HashMap<>();
@@ -339,13 +363,15 @@ public class dbManager {
                 .map(ObjectId::new)
                 .collect(Collectors.toList());
 
-        for (Document doc : docsCollections.find(Filters.in("_id", objectIds))) {
+        System.out.println("WHERE IS MY CANDODO");
+        for (Document doc : docsCollections.find(Filters.in("_id", objectIds)).projection(
+                Projections.include("_id", "url" , "title", "popularity"))) {
             String id = doc.getObjectId("_id").toString();
             String url = doc.getString("url");
             String title = doc.getString("title");
-            String content = doc.getString("content");
+            double popularity = doc.getDouble("popularity");
 
-            WebDocument webDoc = new WebDocument(id, url, title, content);
+            WebDocument webDoc = new WebDocument(id, url, title, "" , popularity);
             docs.put(id , webDoc);
         }
 

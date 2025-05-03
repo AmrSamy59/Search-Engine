@@ -34,29 +34,38 @@ public class QueryProcessor {
         String operator = "";
         Matcher matcher = pattern.matcher(query);
 
-        // Check Operator Case
+        // Check if the query contains a logical operator
         if (matcher.matches()) {
+            // Add the first phrase to the query texts
             queryTexts.add(matcher.group(1).trim());
+
+            // Extract and validate the operator
             operator = matcher.group(2).trim();
             if (!Set.of("and", "or", "not").contains(operator)) {
-                System.out.println("ERROR: Invalid operator: " + operator);
-                throw new IllegalArgumentException("Invalid logical operator: " + operator);
+                String errorMessage = "Invalid logical operator: " + operator;
+                System.out.println("ERROR: " + errorMessage);
+                throw new IllegalArgumentException(errorMessage);
             }
+
+            // Add the second phrase to the query texts
             queryTexts.add(matcher.group(3).trim());
             isUsingOperator = true;
-            System.out.println("Operator 2 Phrases");
-
-        }else { // Check Single Phrase Case
-            pattern  = Pattern.compile("^\"(.*)\"$");
+            System.out.println("Operator with 2 Phrases");
+        } else {
+            // Check if the query is a single phrase enclosed in quotes
+            pattern = Pattern.compile("^\"(.*)\"$");
             matcher = pattern.matcher(query);
+
             if (matcher.matches()) {
                 queryTexts.add(matcher.group(1).trim());
                 isUsingPhrase = true;
                 System.out.println("Single Phrase");
+            } else {
+                // Treat the query as token-based
+                queryTexts.add(query.trim());
             }
-            else
-                queryTexts.add(query); // tokenBased
         }
+
 
         Set<String> candidateDocIds = new HashSet<>();
         RankerContext rankerContext = new RankerContext();
@@ -80,17 +89,24 @@ public class QueryProcessor {
             }
 
             rankerContext.setRanker(new PhraseBasedRanker(0));
-            queryTerms = queryTexts;
+//            queryTerms = queryTexts;
         }
         else {
             candidateDocIds = db.getDocIdsForTokens(tokensFirst , false);
             rankerContext.setRanker(new TokenBasedRanker(0));
-            queryTerms = tokensFirst;
+//            queryTerms = tokensFirst;
             System.out.println("Token Based");
         }
 
-        List<WebDocument> Results = rankerContext.rank(queryTerms , candidateDocIds, operator);
-        System.out.println(queryTerms);
+        System.out.println("WILL RANK");
+
+        double startTime = System.currentTimeMillis();
+        List<WebDocument> Results = rankerContext.rank(queryTexts , tokensFirst, tokensSecond, candidateDocIds, operator);
+        double endTime = System.currentTimeMillis();
+        double duration = (endTime - startTime) / 1000;
+        System.out.println("Anas Ranker took " + duration + " seconds");
+
+//        System.out.println(queryTerms);
         System.out.println(candidateDocIds);
         System.out.println(operator);
 
@@ -101,7 +117,7 @@ public class QueryProcessor {
             System.out.println();
             doc.Print();
             counter++;
-            if (counter > 10)
+            if (counter > 22)
                 break;
         }
 
@@ -110,7 +126,7 @@ public class QueryProcessor {
 
     public static void main(String[] args) throws Exception {
         QueryProcessor qp = new QueryProcessor();
-        qp.process("How to play minecraft");
+        qp.process("\"Autism\"");
 
     }
 
