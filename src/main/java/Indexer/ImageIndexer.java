@@ -162,7 +162,7 @@ public class ImageIndexer implements IndexerInterface {
             // Mark documents as indexed
             ArrayList<String> indexedIds = new ArrayList<>(indexedDocuments.keySet());
             dbManager.markAsIndexed(indexedIds, true);
-            System.out.println("Indexing completed.");
+            System.out.println("Indexing batch completed.");
             indexedDocuments.clear();
 
             // Get next batch of unindexed documents

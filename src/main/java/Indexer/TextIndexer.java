@@ -175,7 +175,7 @@ public class TextIndexer implements IndexerInterface {
             // Mark documents as indexed
             ArrayList<String> indexedIds = new ArrayList<>(indexedDocuments.keySet());
             dbManager.markAsIndexed(indexedIds, false);
-            System.out.println("Indexing completed.");
+            System.out.println("Indexing batch completed.");
             indexedDocuments.clear();
 
             // Get next batch of unindexed documents
