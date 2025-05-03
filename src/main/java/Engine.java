@@ -1,10 +1,7 @@
 import Crawler.Crawler;
-import Indexer.Indexer;
-import Pagerank.LinkGraphBuilder;
+import Indexer.ImageIndexer;
+import Indexer.TextIndexer;
 import Pagerank.PageRank;
-import Pagerank.PageRankCalculator;
-import QueryProcessor.QueryProcessor;
-import dbManager.dbManager;
 
 
 public class Engine {
@@ -12,10 +9,11 @@ public class Engine {
 
     public static void main(String[] args) throws Exception {
         Crawler.main(args);
-        Indexer.main(args);
+        TextIndexer indexer = new TextIndexer();
+        ImageIndexer imageIndexer = new ImageIndexer();
+        indexer.runIndexer();
+        imageIndexer.runIndexer();
         PageRank.main(args);
 
     }
-
-
 }
