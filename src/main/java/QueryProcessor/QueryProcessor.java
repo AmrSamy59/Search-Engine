@@ -1,6 +1,5 @@
 package QueryProcessor;
 
-import Ranker.Ranker;
 import Ranker.TokenBasedRanker;
 import Ranker.PhraseBasedRanker;
 import Ranker.RankerContext;
@@ -8,8 +7,6 @@ import Utils.Tokenizer;
 import Utils.Utils;
 import Utils.WebDocument;
 import dbManager.dbManager;
-import opennlp.tools.stemmer.PorterStemmer;
-import opennlp.tools.tokenize.TokenizerME;
 
 import java.util.*;
 import java.util.regex.Matcher;
@@ -25,7 +22,7 @@ public class QueryProcessor {
         tokenizer = new Tokenizer();
     }
 
-    public void process(String query) throws Exception {
+    public List<WebDocument> process(String query) throws Exception {
         query = query.trim().toLowerCase(); // ALL COMING LOGIC IS BASED ON LOWERCASE
         List<String> queryTexts = new ArrayList<>();
         Pattern pattern = Pattern.compile("\"([^\"]*)\"\\s*(AND|OR|NOT)\\s*\"([^\"]*)\"", Pattern.CASE_INSENSITIVE);
@@ -104,6 +101,8 @@ public class QueryProcessor {
             if (counter > 10)
                 break;
         }
+
+        return Results;
 
     }
 

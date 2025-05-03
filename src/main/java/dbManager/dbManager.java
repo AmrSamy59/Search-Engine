@@ -1,14 +1,12 @@
 package dbManager;
 
-import ImageSearching.Image;
+import Backend.Image;
 import Utils.Posting;
 import Utils.WebDocument;
 import com.mongodb.MongoBulkWriteException;
 import com.mongodb.bulk.BulkWriteError;
-import com.mongodb.bulk.BulkWriteResult;
 import com.mongodb.client.*;
 import com.mongodb.client.model.*;
-import com.mongodb.client.result.InsertManyResult;
 import io.github.cdimascio.dotenv.Dotenv;
 import org.bson.Document;
 import org.bson.types.ObjectId;

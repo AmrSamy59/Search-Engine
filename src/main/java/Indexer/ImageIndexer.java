@@ -1,14 +1,10 @@
 package Indexer;
 
-import ImageSearching.Image;
+import Backend.Image;
 import ImageSearching.ImageFeatureExtractor;
-import Utils.Posting;
-import Utils.Tokenizer;
 import Utils.Utils;
 import Utils.WebDocument;
 import dbManager.dbManager;
-import opennlp.tools.stemmer.PorterStemmer;
-import opennlp.tools.tokenize.TokenizerME;
 
 import java.util.*;
 import java.util.concurrent.*;
@@ -18,7 +14,7 @@ public class ImageIndexer implements IndexerInterface {
     private static ConcurrentHashMap<String, WebDocument> indexedDocuments;
     private static ConcurrentHashMap<String, WebDocument> unindexedDocs;
     private static ConcurrentLinkedQueue<Image> imageQueue;
-    private final dbManager dbManager;
+    private static final dbManager dbManager = new dbManager();
     private final ImageFeatureExtractor imageFeatureExtractor;
     private static final int numThreads = 4;
     private static final int batchSize = 100;
@@ -29,10 +25,8 @@ public class ImageIndexer implements IndexerInterface {
 
     public ImageIndexer() throws Exception {
         indexedDocuments = new ConcurrentHashMap<>();
-        dbManager = new dbManager();
         unindexedDocs = dbManager.getNonIndexedDocuments(batchSize, true);
         imageFeatureExtractor = new ImageFeatureExtractor();
-        imageFeatureExtractor.init();
 
         imageQueue = new ConcurrentLinkedQueue<>();
     }
@@ -91,7 +85,7 @@ public class ImageIndexer implements IndexerInterface {
             try {
                 System.out.println("📦 Saving intermediate batch of " + imgsBatch.size() + " images");
                 // Assuming this is a static reference to dbManager, or you can pass the instance
-                new dbManager().saveImages(imgsBatch);
+                dbManager.saveImages(imgsBatch);
                 System.out.println("✅ Intermediate image batch saved");
             } catch (Exception e) {
                 System.err.println("❌ Failed to save intermediate image batch: " + e.getMessage());
