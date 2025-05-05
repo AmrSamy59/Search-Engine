@@ -1,23 +1,31 @@
 package dbManager;
 
-import Backend.Image;
-import Utils.Posting;
-import Utils.WebDocument;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Queue;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+
+import org.bson.Document;
+import org.bson.types.ObjectId;
+
 import com.mongodb.ConnectionString;
 import com.mongodb.MongoBulkWriteException;
 import com.mongodb.MongoClientSettings;
 import com.mongodb.bulk.BulkWriteError;
 import com.mongodb.client.*;
 import com.mongodb.client.model.*;
-import io.github.cdimascio.dotenv.Dotenv;
-import org.bson.Document;
-import org.bson.types.ObjectId;
 
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.TimeUnit;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
+import Backend.Image;
+import Utils.Posting;
+import Utils.WebDocument;
+import io.github.cdimascio.dotenv.Dotenv;
 
 public class dbManager {
     private static final Dotenv dotenv = Dotenv.load();
@@ -35,6 +43,7 @@ public class dbManager {
     private final MongoCollection<Document> docsCollections;
     private final MongoCollection<Document> crawlerStateCollection;
     private final MongoCollection<Document> imageCollection;
+    private final MongoCollection<Document> queryCollection;
 
     private static final int BULK_WRITE_BATCH_SIZE = 1000;
 
@@ -48,6 +57,7 @@ public class dbManager {
         database = mongoClient.getDatabase(DB_NAME);
         docsCollections = database.getCollection(COLLECTION_NAME);
         tokensCollection = database.getCollection("tokens");  // Renamed for proper casing
+        queryCollection = database.getCollection("queries");
 
         imagesDatabase = imagesMongoClient.getDatabase(DB_NAME);
         imageCollection = imagesDatabase.getCollection("images");
@@ -524,6 +534,18 @@ public class dbManager {
                 .append("_class", img.getClass().getName());
     }
 
+
+    public void addQuery(String query){
+        ObjectId id = new ObjectId(query);
+
+        UpdateOptions options = new UpdateOptions().upsert(true);
+
+         queryCollection.updateOne(
+            Filters.eq("_id", id),
+            Updates.inc("count", 1),
+            options
+            );
+    }
 
     // Close the database connection
     public void close() {
