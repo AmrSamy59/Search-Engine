@@ -50,11 +50,11 @@ public class dbManager {
     public dbManager() {
 
         mongoClient = MongoClients.create(getMongoClientSettings(CONNECTION_STRING));
-        MongoDatabase database = mongoClient.getDatabase("searchengine");
+        MongoDatabase database = mongoClient.getDatabase(DB_NAME);
 
         imagesMongoClient = MongoClients.create(getMongoClientSettings(IMAGES_CONNECTION_STRING));
 
-        database = mongoClient.getDatabase(DB_NAME);
+        
         docsCollections = database.getCollection(COLLECTION_NAME);
         tokensCollection = database.getCollection("tokens");  // Renamed for proper casing
         queryCollection = database.getCollection("queries");
