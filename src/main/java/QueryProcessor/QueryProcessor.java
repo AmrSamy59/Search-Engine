@@ -16,6 +16,7 @@ public class QueryProcessor {
 
     dbManager db;
     Tokenizer tokenizer;
+    private static final int SUGGESTION_LIMIT = 10;
 
     public QueryProcessor() throws Exception {
         db = new dbManager();  // Fixed: Assign to instance variable, not local variable
@@ -134,7 +135,9 @@ public class QueryProcessor {
         return Results;
 
     }
-
+    public List<String> getSuggestions(String query) throws Exception {
+       return db.getSuggestions(query, SUGGESTION_LIMIT);
+    }
 
     public static void main(String[] args) throws Exception {
         QueryProcessor qp = new QueryProcessor();

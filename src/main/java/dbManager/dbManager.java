@@ -14,6 +14,7 @@ import java.util.stream.Collectors;
 
 import org.bson.Document;
 import org.bson.types.ObjectId;
+import org.springframework.data.mongodb.core.index.Index;
 
 import com.mongodb.ConnectionString;
 import com.mongodb.MongoBulkWriteException;
@@ -62,6 +63,9 @@ public class dbManager {
         imagesDatabase = imagesMongoClient.getDatabase(DB_NAME);
         imageCollection = imagesDatabase.getCollection("images");
 
+
+        queryCollection.createIndex(Indexes.ascending("_id")); // Already exists for _id
+        queryCollection.createIndex(Indexes.text("_id")); // For text search
 
         crawlerStateCollection= database.getCollection("crawler_state");
         System.out.println("Connected to MongoDB Atlas.");
@@ -543,6 +547,16 @@ public class dbManager {
             Updates.inc("count", 1),
             options
             );
+    }
+    
+    public List<String> getSuggestions(String prefix,int limit) {
+    return queryCollection.find(Filters.regex("_id", "^" + Pattern.quote(prefix), "i"))
+        .sort(Sorts.descending("count"))
+        .limit(limit)
+        .into(new ArrayList<>())
+        .stream()
+        .map(doc -> doc.getString("_id"))
+        .collect(Collectors.toList());
     }
 
     // Close the database connection

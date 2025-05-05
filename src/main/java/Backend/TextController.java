@@ -34,4 +34,11 @@ public class TextController {
         System.out.println("page: " + page);
         return queryProcessor.process(queryValue, page, limit);
     }
+    @CrossOrigin(origins = "*")
+    @GetMapping("/suggestions")
+    public List<String> handleSuggestions(@RequestParam(name = "query") String queryValue) throws Exception {
+        System.out.println("query: " + queryValue);
+        return queryProcessor.getSuggestions(queryValue);
+    }
+
 }
