@@ -54,7 +54,7 @@ public class dbManager {
 
         imagesMongoClient = MongoClients.create(getMongoClientSettings(IMAGES_CONNECTION_STRING));
 
-        
+
         docsCollections = database.getCollection(COLLECTION_NAME);
         tokensCollection = database.getCollection("tokens");  // Renamed for proper casing
         queryCollection = database.getCollection("queries");
@@ -536,12 +536,10 @@ public class dbManager {
 
 
     public void addQuery(String query){
-        ObjectId id = new ObjectId(query);
-
         UpdateOptions options = new UpdateOptions().upsert(true);
 
          queryCollection.updateOne(
-            Filters.eq("_id", id),
+            Filters.eq("_id", query),
             Updates.inc("count", 1),
             options
             );

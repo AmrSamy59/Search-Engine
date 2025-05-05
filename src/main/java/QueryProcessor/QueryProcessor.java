@@ -37,7 +37,9 @@ public class QueryProcessor {
         new Thread(() -> {
             try {
                 db.addQuery(finalQuery); // Add the query to the database
+                System.out.println("Query added to the database: " + finalQuery);
             } catch (Exception e) {
+                System.out.println("eRROr");
                 e.printStackTrace();
             }
         }).start();
