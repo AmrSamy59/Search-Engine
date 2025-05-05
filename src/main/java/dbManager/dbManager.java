@@ -14,7 +14,6 @@ import java.util.stream.Collectors;
 
 import org.bson.Document;
 import org.bson.types.ObjectId;
-import org.springframework.data.mongodb.core.index.Index;
 
 import com.mongodb.ConnectionString;
 import com.mongodb.MongoBulkWriteException;
