@@ -16,6 +16,8 @@ public class WebDocument {
     public Double popularity;
     public int[] children;
     private List<String> images;
+    private double tfscore;
+    private double totalscore;
     private Document parsedDocument; // Cache the parsed document for better performance
 
     public WebDocument(String docId, String url, String title, String html, Double popularity, int[] children) {
@@ -34,6 +36,27 @@ public class WebDocument {
         this.html = html;
         this.popularity = popularity;
     }
+
+    public void setTfScore(double x)
+    {
+        this.tfscore = x;
+    }
+
+    public double getTfScore(double x)
+    {
+        return this.tfscore;
+    }
+
+    public void setTotalScore(double x)
+    {
+        this.totalscore = x;
+    }
+
+    public double getTotalScore(double x)
+    {
+        return this.totalscore;
+    }
+
 
     public WebDocument(String docId, String url, String title, String html) {
         this.docId = docId;
@@ -127,6 +150,10 @@ public class WebDocument {
         System.out.println("Document ID: " + docId);
         System.out.println(url);
         System.out.println(title);
+        System.out.println("totalScore " + totalscore);
+        System.out.println("tfscore " + tfscore);
+        System.out.println("popscore " + popularity);
+
         //System.out.println(html);
         System.out.println();
     }

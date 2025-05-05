@@ -66,7 +66,6 @@ public class QueryProcessor {
             }
         }
 
-
         Set<String> candidateDocIds = new HashSet<>();
         RankerContext rankerContext = new RankerContext();
         List<String> tokensFirst = tokenizer.Tokenize(queryTexts.get(0));
@@ -88,28 +87,21 @@ public class QueryProcessor {
                 candidateDocIds.addAll(candidateDocIdsSecond);
             }
 
-            rankerContext.setRanker(new PhraseBasedRanker(0));
-//            queryTerms = queryTexts;
+            rankerContext.setRanker(new PhraseBasedRanker(9));
         }
         else {
             candidateDocIds = db.getDocIdsForTokens(tokensFirst , false);
-            rankerContext.setRanker(new TokenBasedRanker(0));
-//            queryTerms = tokensFirst;
+            rankerContext.setRanker(new TokenBasedRanker(9));
             System.out.println("Token Based");
         }
-
-        System.out.println("WILL RANK");
 
         double startTime = System.currentTimeMillis();
         List<WebDocument> Results = rankerContext.rank(queryTexts , tokensFirst, tokensSecond, candidateDocIds, operator);
         double endTime = System.currentTimeMillis();
         double duration = (endTime - startTime) / 1000;
-        System.out.println("Anas Ranker took " + duration + " seconds");
-
-//        System.out.println(queryTerms);
+        System.out.println("Doc Ranker took " + duration + " seconds");
         System.out.println(candidateDocIds);
         System.out.println(operator);
-
         System.out.println("Found " + Results.size() + " results");
 
         int counter = 0;
@@ -126,7 +118,7 @@ public class QueryProcessor {
 
     public static void main(String[] args) throws Exception {
         QueryProcessor qp = new QueryProcessor();
-        qp.process("\"Autism\"");
+        qp.process("minecraft");
 
     }
 

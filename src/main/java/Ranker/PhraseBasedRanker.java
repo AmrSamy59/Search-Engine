@@ -50,6 +50,15 @@ public class PhraseBasedRanker implements Ranker {
         // Get relevance scores - pass weightConfig
         Map<String, Double> docScores = Helpers.RelevanceScore(combinedTokens, tokenToPostings, totalDocCount, filteredDocs, weightConfig);
 
+        for (Map.Entry<String, Double> entry : docScores.entrySet()) {
+            String docId = entry.getKey();
+            Double score = entry.getValue();
+            WebDocument document = filteredDocs.get(docId);
+            if (document != null) {
+                document.setTfScore(score); // Set the document score
+            }
+        }
+
         // Apply phrase boost for titles
         for (WebDocument doc : filteredDocs.values()) {
             double titleCount = countPhraseOccurrences(firstPhrase, doc.getTitle()) +
@@ -62,6 +71,16 @@ public class PhraseBasedRanker implements Ranker {
 
         // Apply popularity adjustment
         docScores = Helpers.ApplyPopularityScore(docScores, filteredDocs, popularityAlpha);
+
+        for (Map.Entry<String, Double> entry : docScores.entrySet()) {
+            String docId = entry.getKey();
+            Double score = entry.getValue();
+            WebDocument document = filteredDocs.get(docId);
+            if (document != null) {
+                document.setTotalScore(score); // Set the document score
+            }
+        }
+
 
         return docScores.entrySet().stream()
                 .sorted((a, b) -> Double.compare(b.getValue(), a.getValue()))
