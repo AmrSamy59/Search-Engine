@@ -11,14 +11,32 @@ Falcony provides powerful text search capabilities with support for:
 - PageRank implementation for determining page importance
 - Search suggestions based on popular football queries
 
-![Text Search Screenshot Placeholder](#)
+<div style="display: flex; justify-content: space-around; align-items: center;">
+  <figure style="text-align: center;">
+    <h5>Landing Page</h5>
+    <img src="https://github.com/AmrSamy59/Search-Engine/blob/main/screenshots/0.png" alt="Image 1" height="400px" width="812px">
+  </figure>
+  <figure style="text-align: center;">
+    <h5>Suggestions</h5>
+    <img src="https://github.com/AmrSamy59/Search-Engine/blob/main/screenshots/1.png" alt="Image 1" height="400px" width="812px">
+  </figure>
+  <figure style="text-align: center;">
+    <h5>Text Search</h5>
+    <img src="https://github.com/AmrSamy59/Search-Engine/blob/main/screenshots/2.png" alt="Image 1" height="400px" width="812px">
+  </figure>
+</div>
 
 ### 2. Phrase Searching
 Search for exact phrases using quotation marks:
 - Example: `"Cristiano Ronaldo goals"`
 - Results will include only pages containing the exact phrase
 
-![Phrase Search Screenshot Placeholder](#)
+<div style="display: flex; justify-content: space-around; align-items: center;">
+  <figure style="text-align: center;">
+    <h5>Phrase Searching</h5>
+    <img src="https://github.com/AmrSamy59/Search-Engine/blob/main/screenshots/3.png" alt="Image 1" height="400px" width="812px">
+  </figure>
+</div>
 
 ### 3. Boolean Operators
 Combine phrases with logical operators for advanced searching:
@@ -26,7 +44,12 @@ Combine phrases with logical operators for advanced searching:
 - OR: `"Premier League" OR "La Liga"`
 - NOT: `"Real Madrid" NOT "Champions League"`
 
-![Boolean Search Screenshot Placeholder](#)
+<div style="display: flex; justify-content: space-around; align-items: center;">
+  <figure style="text-align: center;">
+    <h5>Boolean Operators</h5>
+    <img src="https://github.com/AmrSamy59/Search-Engine/blob/main/screenshots/4.png" alt="Image 1" height="400px" width="812px">
+  </figure>
+</div>
 
 ### 4. Image Search
 Search by uploading an image to find visually similar football images:
@@ -34,7 +57,12 @@ Search by uploading an image to find visually similar football images:
 - Vector similarity search for efficient image matching
 - Supports various image formats
 
-![Image Search Screenshot Placeholder](#)
+##### Image Searching
+![Video demo](https://github.com/AmrSamy59/Search-Engine/blob/main/screenshots/6.gif)
+<div style="display: flex; justify-content: space-around; align-items: center;">
+  <figure style="text-align: center;">    <img src="https://github.com/AmrSamy59/Search-Engine/blob/main/screenshots/5.png" alt="Image 1" height="400px" width="812px">
+  </figure>
+</div>
 
 ## Architecture
 
@@ -113,17 +141,3 @@ Search by uploading an image to find visually similar football images:
 - Graph representation of web pages and their links
 - Iterative calculation of importance scores
 - Integration of scores into the document ranking process
-
-## Screenshots
-
-### Home Page
-![Home Page Screenshot Placeholder](#)
-
-### Search Results
-![Search Results Screenshot Placeholder](#)
-
-### Image Search
-![Image Search Screenshot Placeholder](#)
-
-### Search Suggestions
-![Search Suggestions Screenshot Placeholder](#)
